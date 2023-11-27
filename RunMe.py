@@ -22,24 +22,25 @@ def main():
     # build the corpus
     corpus: [] = buildCorpus(SongsCSVDF)
     
-    # get a wordcount
+    # get a wordcount of the entire corpus
     wordcounts = Counter(corpus)
+    plotCommonWordOccurances(wordcounts, len(SongsCSVDF.index), NMOSTCOMMON)
+
     mostCommonWords = dict(wordcounts.most_common(NMOSTCOMMON))
 
+
+def plotCommonWordOccurances(wordcounts: Counter, numSongs: int, n: int):
     plt.figure()
-    plt.title(f"Occurances of top {NMOSTCOMMON} words in {len(SongsCSVDF.index)} songs")
+    plt.title(f"Occurances of top {n} words in {numSongs} songs")
     plt.xlabel("Common words")
     plt.ylabel("Occurrances")
     count = 0
-    for word, occurances in wordcounts.most_common(NMOSTCOMMON):
+    for word, occurances in wordcounts.most_common(n):
         if (count < 5):
             plt.annotate(word, [count, occurances])
-        
         plt.plot(count, occurances, "b-o")
         count += 1
-
     plt.show()
-
 
 
 def getDataFrameSongsCSV() -> pd.DataFrame:
