@@ -84,7 +84,6 @@ def plotEigenvalues(eigenvalues: np.ndarray):
     plt.show()
 
 
-
 def buildRelativeOccurances(mostCommonWords: dict, data: pd.DataFrame) -> pd.DataFrame:
     # set up the dataframe
     cols = SONGMETADATA.copy() # must copy
