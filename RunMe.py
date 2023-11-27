@@ -11,7 +11,8 @@ from collections import Counter
 
 __author__ = "Andrew Nakamoto"
 
-NMOSTCOMMON = 500
+NMOSTCOMMON: int = 500
+PROCESSEDCSVFILEPATH: str = "RelativeFrequencies.csv"
 
 def main():
     """ Main entry point of the app """
@@ -26,9 +27,13 @@ def main():
     wordcounts = Counter(corpus)
     # plotCommonWordOccurances(wordcounts, len(SongsCSVDF.index), NMOSTCOMMON)
 
-    mostCommonWords: dict = dict(wordcounts.most_common(NMOSTCOMMON))
-
+    # can take a while due to buildRelativeOccurances, so do it once and then use the saved csv
+    """mostCommonWords: dict = dict(wordcounts.most_common(NMOSTCOMMON))
     relativeDF = buildRelativeOccurances(mostCommonWords, SongsCSVDF)
+    relativeDF.to_csv(PROCESSEDCSVFILEPATH, index=False, encoding="utf-8")"""
+
+    relativeDF: pd.DataFrame = pd.read_csv(PROCESSEDCSVFILEPATH, encoding="utf-8")
+
     print(relativeDF)
 
 
@@ -51,7 +56,7 @@ def buildRelativeOccurances(mostCommonWords: dict, data: pd.DataFrame) -> pd.Dat
             i: float = wordcounts.get(word)
             if i is None:
                 i = 0
-            newRow[word] = (i)
+            newRow[word] = i / mostCommonWords.get(word)
         df = pd.concat([df, newRow.to_frame().T], ignore_index=True)
 
     return df
