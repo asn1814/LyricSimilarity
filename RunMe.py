@@ -5,14 +5,17 @@ Running this module creates
 import re
 import pandas as pd
 import nltk
+import matplotlib.pyplot as plt
 
 from collections import Counter
 
 __author__ = "Andrew Nakamoto"
 
+NMOSTCOMMON = 500
 
 def main():
     """ Main entry point of the app """
+
     # get a pandas dataframe
     SongsCSVDF: pd.DataFrame = getDataFrameSongsCSV()
 
@@ -21,13 +24,29 @@ def main():
     
     # get a wordcount
     wordcounts = Counter(corpus)
-    print(wordcounts.most_common(40))
-    print(wordcounts.get("love"))
+    mostCommonWords = dict(wordcounts.most_common(NMOSTCOMMON))
+
+    plt.figure()
+    plt.title(f"Occurances of top {NMOSTCOMMON} words in {len(SongsCSVDF.index)} songs")
+    plt.xlabel("Common words")
+    plt.ylabel("Occurrances")
+    count = 0
+    for word, occurances in wordcounts.most_common(NMOSTCOMMON):
+        if (count < 5):
+            plt.annotate(word, [count, occurances])
+        
+        plt.plot(count, occurances, "b-o")
+        count += 1
+
+    plt.show()
+
+
 
 def getDataFrameSongsCSV() -> pd.DataFrame:
     df: pd.DataFrame = pd.read_csv('Songs.csv')
     df = df[["Title", "Lyrics"]]
     return df
+
 
 def buildCorpus(data: pd.DataFrame) -> []: 
     # get stopwords
