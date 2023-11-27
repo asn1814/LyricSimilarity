@@ -37,7 +37,11 @@ def main():
 
     relativeDF: pd.DataFrame = pd.read_csv(PROCESSEDCSVFILEPATH, encoding="utf-8")
 
-    arr: np.ndarray = relativeDF.drop(columns=SONGMETADATA).to_numpy()
+    plotPCA(relativeDF)
+
+
+def plotPCA(df: pd.DataFrame):
+    arr: np.ndarray = df.drop(columns=SONGMETADATA).to_numpy()
     # normalize and standardize the vectors
     standardizedData = (arr - arr.mean(axis=0)) / arr.std(axis=0)
     covarianceMatrix = np.cov(standardizedData, rowvar=False)
@@ -47,6 +51,7 @@ def main():
     # utilize the sort order to sort eigenvalues and eigenvectors
     sorted_eigenvalues = eigenvalues[order_of_importance]
     sorted_eigenvectors = eigenvectors[:,order_of_importance] # sort the columns
+    # plotEigenvalues(sorted_eigenvalues)
 
     k = 2 # select the number of principal components
     reduced_data = np.matmul(standardizedData, sorted_eigenvectors[:,:k]) # transform the original data
@@ -54,23 +59,28 @@ def main():
     plt.ylim(top=5, bottom=-5)
     for index in range(len(reduced_data)):
         x, y = reduced_data[index]
-        if (relativeDF.iloc[index]["Artist"] == "Taylor Swift"):
-            plt.plot(x, y, "c-x")
-            #plt.annotate(relativeDF.iloc[index]["Title"], [x, y])
-        elif (relativeDF.iloc[index]["Artist"] == "Nat King Cole"):
-            plt.plot(x, y, "c-x")
-        elif (relativeDF.iloc[index]["Artist"] == "Ed Sheeran"):
-            plt.plot(x, y, "r-o")
+        if (df.iloc[index]["Artist"] == "Taylor Swift"):
+            plt.plot(x, y, "b-o")
+            plt.annotate(df.iloc[index]["Title"], [x, y])
+        elif (df.iloc[index]["Artist"] == "Nat King Cole"):
+            plt.plot(x, y, "c-o")
+        elif (df.iloc[index]["Artist"] == "Ed Sheeran"):
+            plt.plot(x, y, "c-o")
         else:
-            plt.plot(x, y, "c-x")
+            plt.plot(x, y, "c-o")
     plt.show()
     
+
 def plotEigenvalues(eigenvalues: np.ndarray):
     plt.figure()
     plt.title(f"Eigenvalues of the covariance matrix")
     plt.xlabel("Eigenvalue e")
     plt.ylabel("Magnitude of e")
-    plt.plot(eigenvalues, np.arange(len(eigenvalues)), "b-o")
+    eigenvalues = eigenvalues.copy()
+    eigenvalues.sort()
+    eigenvalues = eigenvalues[::-1]
+    print(eigenvalues)
+    plt.plot(np.arange(len(eigenvalues)), eigenvalues)
     plt.show()
 
 
