@@ -4,7 +4,7 @@ Running this module creates
 
 import re
 import pandas as pd
-import nltk
+import numpy as np
 import matplotlib.pyplot as plt
 
 from collections import Counter
@@ -24,9 +24,37 @@ def main():
     
     # get a wordcount of the entire corpus
     wordcounts = Counter(corpus)
-    plotCommonWordOccurances(wordcounts, len(SongsCSVDF.index), NMOSTCOMMON)
+    # plotCommonWordOccurances(wordcounts, len(SongsCSVDF.index), NMOSTCOMMON)
 
-    mostCommonWords = dict(wordcounts.most_common(NMOSTCOMMON))
+    mostCommonWords: dict = dict(wordcounts.most_common(NMOSTCOMMON))
+
+    relativeDF = buildRelativeOccurances(mostCommonWords, SongsCSVDF)
+    print(relativeDF)
+
+
+def buildRelativeOccurances(mostCommonWords: dict, data: pd.DataFrame) -> pd.DataFrame:
+    cols = ["Title", "Lyrics"]
+    wordsToTrack = list(mostCommonWords.keys())
+    cols.extend(wordsToTrack)
+    
+    df: pd.DataFrame = pd.DataFrame(columns=cols)
+    newRows: list = []
+
+    for index, row in data.iterrows():
+        print(f"Processing song {index}")
+        tokens = tokenize(row["Lyrics"])
+        wordcounts: Counter = Counter(tokens)
+        newRow: pd.Series = pd.Series()
+        newRow["Title"] = (row["Title"])
+        newRow["Lyrics"] = (row["Lyrics"])
+        for word in wordsToTrack:
+            i: float = wordcounts.get(word)
+            if i is None:
+                i = 0
+            newRow[word] = (i)
+        df = pd.concat([df, newRow.to_frame().T], ignore_index=True)
+
+    return df
 
 
 def plotCommonWordOccurances(wordcounts: Counter, numSongs: int, n: int):
@@ -64,15 +92,19 @@ def buildCorpus(data: pd.DataFrame) -> []:
             # this skips them
             continue
 
-        # considered a more complex tokenizer but realized it was mostly irrelevant
-        text = re.sub("[0-9]+|\||\(|\)", "", text.lower())
-        tokens = re.split("\W+", text)
+        tokens = tokenize(text)
 
         for word in tokens:
             if word not in stops:
                 corpus.append(word)
 
     return corpus
+
+
+def tokenize(text: str) -> []:
+    # considered a more complex tokenizer but realized it was mostly irrelevant
+    text = re.sub("[0-9]+|\||\(|\)", "", text.lower())
+    return re.split("\W+", text)
 
 
 if __name__ == "__main__":
