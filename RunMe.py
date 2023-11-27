@@ -11,7 +11,7 @@ from collections import Counter
 
 __author__ = "Andrew Nakamoto"
 
-NMOSTCOMMON: int = 500
+NMOSTCOMMON: int = 100
 PROCESSEDCSVFILEPATH: str = "RelativeFrequencies.csv"
 
 def main():
