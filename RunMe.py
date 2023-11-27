@@ -13,11 +13,13 @@ __author__ = "Andrew Nakamoto"
 
 NMOSTCOMMON: int = 100
 PROCESSEDCSVFILEPATH: str = "RelativeFrequencies.csv"
+LYRICS: str = "Lyrics"
+SONGMETADATA: list = ["Artist", "Title", LYRICS]
 
 def main():
     """ Main entry point of the app """
 
-    # get a pandas dataframe
+    """# get a pandas dataframe
     SongsCSVDF: pd.DataFrame = getDataFrameSongsCSV()
 
     # build the corpus
@@ -28,7 +30,7 @@ def main():
     # plotCommonWordOccurances(wordcounts, len(SongsCSVDF.index), NMOSTCOMMON)
 
     # can take a while due to buildRelativeOccurances, so do it once and then use the saved csv
-    """mostCommonWords: dict = dict(wordcounts.most_common(NMOSTCOMMON))
+    mostCommonWords: dict = dict(wordcounts.most_common(NMOSTCOMMON))
     relativeDF = buildRelativeOccurances(mostCommonWords, SongsCSVDF)
     relativeDF.to_csv(PROCESSEDCSVFILEPATH, index=False, encoding="utf-8")"""
 
@@ -38,25 +40,28 @@ def main():
 
 
 def buildRelativeOccurances(mostCommonWords: dict, data: pd.DataFrame) -> pd.DataFrame:
-    cols = ["Title", "Lyrics"]
+    # set up the dataframe
+    cols = SONGMETADATA.copy() # must copy
     wordsToTrack = list(mostCommonWords.keys())
     cols.extend(wordsToTrack)
-    
     df: pd.DataFrame = pd.DataFrame(columns=cols)
-    newRows: list = []
 
+    # add each song to the DataFrame
     for index, row in data.iterrows():
         print(f"Processing song {index}")
-        tokens = tokenize(row["Lyrics"])
+        # get tokens of the song
+        tokens = tokenize(row[LYRICS])
         wordcounts: Counter = Counter(tokens)
+        # build up the new row to add using the song
         newRow: pd.Series = pd.Series()
-        newRow["Title"] = (row["Title"])
-        newRow["Lyrics"] = (row["Lyrics"])
+        for feature in SONGMETADATA:
+            newRow[feature] = row[feature]
         for word in wordsToTrack:
             i: float = wordcounts.get(word)
             if i is None:
                 i = 0
             newRow[word] = i / mostCommonWords.get(word)
+        # add the new row to the DataFrame
         df = pd.concat([df, newRow.to_frame().T], ignore_index=True)
 
     return df
@@ -78,7 +83,7 @@ def plotCommonWordOccurances(wordcounts: Counter, numSongs: int, n: int):
 
 def getDataFrameSongsCSV() -> pd.DataFrame:
     df: pd.DataFrame = pd.read_csv('Songs.csv')
-    df = df[["Title", "Lyrics"]]
+    df = df[["Artist", "Title", "Lyrics"]] # equivalent to SONGMETADATA
     return df
 
 
@@ -91,7 +96,7 @@ def buildCorpus(data: pd.DataFrame) -> []:
     corpus = []
     for index, row in data.iterrows():
         # get the lyrics of each song
-        text = row["Lyrics"]
+        text = row[LYRICS]
         if type(text) is not str:
             # some songs do not have lyrics inputted and instead have NaN
             # this skips them
