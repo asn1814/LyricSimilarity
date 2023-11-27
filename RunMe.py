@@ -6,6 +6,7 @@ import re
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+#from sklearn.decomposition import KernelPCA
 
 from collections import Counter
 
@@ -36,7 +37,42 @@ def main():
 
     relativeDF: pd.DataFrame = pd.read_csv(PROCESSEDCSVFILEPATH, encoding="utf-8")
 
-    print(relativeDF)
+    arr: np.ndarray = relativeDF.drop(columns=SONGMETADATA).to_numpy()
+    # normalize and standardize the vectors
+    standardizedData = (arr - arr.mean(axis=0)) / arr.std(axis=0)
+    covarianceMatrix = np.cov(standardizedData, rowvar=False)
+    eigenvalues, eigenvectors = np.linalg.eig(covarianceMatrix)
+    # np.argsort can only provide lowest to highest; use [::-1] to reverse the list
+    order_of_importance = np.argsort(eigenvalues)[::-1] 
+    # utilize the sort order to sort eigenvalues and eigenvectors
+    sorted_eigenvalues = eigenvalues[order_of_importance]
+    sorted_eigenvectors = eigenvectors[:,order_of_importance] # sort the columns
+
+    k = 2 # select the number of principal components
+    reduced_data = np.matmul(standardizedData, sorted_eigenvectors[:,:k]) # transform the original data
+    plt.figure()
+    plt.ylim(top=5, bottom=-5)
+    for index in range(len(reduced_data)):
+        x, y = reduced_data[index]
+        if (relativeDF.iloc[index]["Artist"] == "Taylor Swift"):
+            plt.plot(x, y, "c-x")
+            #plt.annotate(relativeDF.iloc[index]["Title"], [x, y])
+        elif (relativeDF.iloc[index]["Artist"] == "Nat King Cole"):
+            plt.plot(x, y, "c-x")
+        elif (relativeDF.iloc[index]["Artist"] == "Ed Sheeran"):
+            plt.plot(x, y, "r-o")
+        else:
+            plt.plot(x, y, "c-x")
+    plt.show()
+    
+def plotEigenvalues(eigenvalues: np.ndarray):
+    plt.figure()
+    plt.title(f"Eigenvalues of the covariance matrix")
+    plt.xlabel("Eigenvalue e")
+    plt.ylabel("Magnitude of e")
+    plt.plot(eigenvalues, np.arange(len(eigenvalues)), "b-o")
+    plt.show()
+
 
 
 def buildRelativeOccurances(mostCommonWords: dict, data: pd.DataFrame) -> pd.DataFrame:
