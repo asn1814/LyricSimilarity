@@ -16,8 +16,11 @@ __author__ = "Andrew Nakamoto"
 
 NMOSTCOMMON: int = 100
 PROCESSEDCSVFILEPATH: str = "RelativeFrequencies.csv"
+LDAFILEPATH: str = "LDA.csv"
 LYRICS: str = "Lyrics"
 SONGMETADATA: list = ["Artist", "Title", LYRICS]
+NUMTOPICS = 50
+NUMLDAPASSES = 80
 
 def main():
     """ Main entry point of the app """
@@ -63,17 +66,40 @@ def useLDA(SongsCSVDF: pd.DataFrame):
 
     # The LdaModel class is described in detail in the gensim documentation.
     print("Beginning LDA training")
-    ldamodel = gensim.models.ldamodel.LdaModel(corpus, num_topics=8, id2word = dictionary, passes=20)
+    ldamodel = gensim.models.ldamodel.LdaModel(corpus, num_topics=NUMTOPICS, id2word = dictionary, passes=NUMLDAPASSES)
     print("LDA model trained")
 
     # Our LDA model is now stored as ldamodel. We can review our topics with the print_topic and print_topics methods
     # https://www.machinelearningplus.com/nlp/topic-modeling-visualization-how-to-present-results-lda-models/
-    df_topic_sents_keywords = format_topics_sentences(ldamodel=ldamodel, corpus=corpus, texts=SongsCSVDF)
+    """df_topic_sents_keywords = format_topics_sentences(ldamodel=ldamodel, corpus=corpus, texts=SongsCSVDF)
     
     # Format
     df_dominant_topic = df_topic_sents_keywords#.reset_index()
     df_dominant_topic.columns = SONGMETADATA + ['Dominant_Topic', 'Perc_Contribution', 'Topic_Keywords']
     print(df_dominant_topic)
+    df_dominant_topic.to_csv(LDAFILEPATH, index=False, encoding="utf-8")"""
+
+    df_with_LDA_vecs = LDA_to_vecs(ldamodel, corpus, SongsCSVDF)
+    df_with_LDA_vecs.columns = SONGMETADATA + ["LDA Vector"]
+    plotPCA(df_with_LDA_vecs, f"PCA on LDA vectors with {NUMTOPICS} topics and {NUMLDAPASSES} passes")
+
+
+def LDA_to_vecs(ldamodel: gensim.models.LdaModel, corpus, texts: pd.DataFrame) -> pd.DataFrame:
+    df_with_vec = pd.DataFrame()
+
+    # Get main topic in each document
+    for i, row_list in enumerate(ldamodel[corpus]):
+        row = row_list[0] if ldamodel.per_word_topics else row_list  
+        # print(row)
+        vec = np.zeros(NUMTOPICS)
+        for (topic_num, prop_topic) in row:
+            vec[topic_num] = prop_topic
+        
+        df_with_vec = pd.concat([df_with_vec, pd.Series([vec])], axis=0, ignore_index=True)
+
+    df_with_vec.columns = ["LDA Vector"]
+
+    return pd.concat([texts, df_with_vec], ignore_index=True, axis=1)
 
 
 def format_topics_sentences(ldamodel: gensim.models.LdaModel, corpus, texts):
@@ -83,7 +109,6 @@ def format_topics_sentences(ldamodel: gensim.models.LdaModel, corpus, texts):
     # Get main topic in each document
     for i, row_list in enumerate(ldamodel[corpus]):
         row = row_list[0] if ldamodel.per_word_topics else row_list            
-        # print(row)
         row = sorted(row, key=lambda x: (x[1]), reverse=True)
         # Get the Dominant topic, Perc Contribution and Keywords for each document
         for j, (topic_num, prop_topic) in enumerate(row):
@@ -104,7 +129,6 @@ def format_topics_sentences(ldamodel: gensim.models.LdaModel, corpus, texts):
     return(sent_topics_df)
 
 
-
 def removeStopsAndStem(tokens: list) -> list:
     stops = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', "you're", "you've", "you'll", "you'd", 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', "she's", 'her', 'hers', 'herself', 'it', "it's", 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', "that'll", 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', "don't", 'should', "should've", 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren', "aren't", 'couldn', "couldn't", 'didn', "didn't", 'doesn', "doesn't", 'hadn', "hadn't", 'hasn', "hasn't", 'haven', "haven't", 'isn', "isn't", 'ma', 'mightn', "mightn't", 'mustn', "mustn't", 'needn', "needn't", 'shan', "shan't", 'shouldn', "shouldn't", 'wasn', "wasn't", 'weren', "weren't", 'won', "won't", 'wouldn', "wouldn't"]
     stops.append("urlcopyembedcopy")
@@ -119,8 +143,13 @@ def removeStopsAndStem(tokens: list) -> list:
     return result
 
 
-def plotPCA(df: pd.DataFrame):
+def plotPCA(df: pd.DataFrame, title: str = "PCA Visualization"):
     arr: np.ndarray = df.drop(columns=SONGMETADATA).to_numpy()
+    if type(arr[0]) is np.ndarray: # if sent from LDA, need this to clean it up
+        newarr = np.zeros([arr.shape[0], NUMTOPICS])
+        for idx, elt in enumerate(arr):
+            newarr[idx] = elt[0]
+        arr = newarr
     # normalize and standardize the vectors
     standardizedData = (arr - arr.mean(axis=0)) / arr.std(axis=0)
     covarianceMatrix = np.cov(standardizedData, rowvar=False)
@@ -134,19 +163,20 @@ def plotPCA(df: pd.DataFrame):
 
     k = 2 # select the number of principal components
     reduced_data = np.matmul(standardizedData, sorted_eigenvectors[:,:k]) # transform the original data
-    plt.figure()
+    plt.figure(figsize=[10, 10])
     plt.ylim(top=5, bottom=-5)
     for index in range(len(reduced_data)):
         x, y = reduced_data[index]
         if (df.iloc[index]["Artist"] == "Taylor Swift"):
-            plt.plot(x, y, "b-o")
+            plt.plot(x, y, "b-o", label="Taylor Swift")
             plt.annotate(df.iloc[index]["Title"], [x, y])
-        elif (df.iloc[index]["Artist"] == "Nat King Cole"):
-            plt.plot(x, y, "c-o")
+        elif (df.iloc[index]["Artist"] == "Frank Sinatra"):
+            plt.plot(x, y, "r-o")
         elif (df.iloc[index]["Artist"] == "Ed Sheeran"):
-            plt.plot(x, y, "c-o")
+            plt.plot(x, y, "m-o")
         else:
             plt.plot(x, y, "c-o")
+
     plt.show()
     
 
