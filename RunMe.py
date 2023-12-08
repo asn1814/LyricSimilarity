@@ -67,7 +67,41 @@ def useLDA(SongsCSVDF: pd.DataFrame):
     print("LDA model trained")
 
     # Our LDA model is now stored as ldamodel. We can review our topics with the print_topic and print_topics methods
-    print(ldamodel.print_topics(num_topics=-1, num_words=8))
+    # https://www.machinelearningplus.com/nlp/topic-modeling-visualization-how-to-present-results-lda-models/
+    df_topic_sents_keywords = format_topics_sentences(ldamodel=ldamodel, corpus=corpus, texts=SongsCSVDF)
+    
+    # Format
+    df_dominant_topic = df_topic_sents_keywords#.reset_index()
+    df_dominant_topic.columns = SONGMETADATA + ['Dominant_Topic', 'Perc_Contribution', 'Topic_Keywords']
+    print(df_dominant_topic)
+
+
+def format_topics_sentences(ldamodel: gensim.models.LdaModel, corpus, texts):
+    # Init output
+    sent_topics_df: pd.DataFrame = pd.DataFrame()
+
+    # Get main topic in each document
+    for i, row_list in enumerate(ldamodel[corpus]):
+        row = row_list[0] if ldamodel.per_word_topics else row_list            
+        # print(row)
+        row = sorted(row, key=lambda x: (x[1]), reverse=True)
+        # Get the Dominant topic, Perc Contribution and Keywords for each document
+        for j, (topic_num, prop_topic) in enumerate(row):
+            if j == 0:  # => dominant topic
+                wp = ldamodel.show_topic(topic_num)
+                topic_keywords = ", ".join([word for word, prop in wp])
+                #sent_topics_df = sent_topics_df.append(pd.Series([int(topic_num), round(prop_topic,4), topic_keywords]), ignore_index=True)
+                series_row = pd.Series([int(topic_num), round(prop_topic,4), topic_keywords])
+                sent_topics_df = pd.concat([sent_topics_df, series_row], ignore_index=True, axis=1)
+            else:
+                break
+    
+    sent_topics_df = sent_topics_df.T
+    sent_topics_df.columns = ['Dominant_Topic', 'Perc_Contribution', 'Topic_Keywords']
+    # Add original text to the end of the output
+    # contents = pd.Series(texts)
+    sent_topics_df = pd.concat([texts, sent_topics_df], axis=1, ignore_index=True)
+    return(sent_topics_df)
 
 
 
