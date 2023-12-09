@@ -21,8 +21,8 @@ PROCESSEDCSVFILEPATH: str = "RelativeFrequencies.csv"
 LDAFILEPATH: str = "LDA.csv"
 LYRICS: str = "Lyrics"
 SONGMETADATA: list = ["Artist", "Title", LYRICS]
-NUMTOPICS = 40
-NUMLDAPASSES = 100
+NUMTOPICS = 2
+NUMLDAPASSES = 200
 
 def main():
     """ Main entry point of the app """
@@ -85,6 +85,47 @@ def useLDA(SongsCSVDF: pd.DataFrame):
     df_with_LDA_vecs = LDA_to_vecs(ldamodel, corpus, SongsCSVDF)
     df_with_LDA_vecs.columns = SONGMETADATA + ["LDA Vector"]
     plotPCA(df_with_LDA_vecs, f"PCA on LDA vectors with {NUMTOPICS} topics and {NUMLDAPASSES} passes")
+
+
+    # use jaccard distance to plot a springgraph 
+    # https://radimrehurek.com/gensim_3.8.3/auto_examples/tutorials/run_distance_metrics.html
+    """G = nx.Graph()
+    for i, _ in enumerate(processed_lyrics):
+        G.add_node(i)
+
+    for (i1, i2) in itertools.combinations(range(len(processed_lyrics)), 2):
+        bow1, bow2 = processed_lyrics[i1], processed_lyrics[i2]
+        distance = gensim.matutils.jaccard(bow1, bow2) + 1 # had to add the +1 myself to prevent divide by 0
+        G.add_edge(i1, i2, weight=1/distance)
+
+    #
+    # https://networkx.github.io/documentation/networkx-1.9/examples/drawing/weighted_graph.html
+    #
+    pos = nx.spring_layout(G)
+
+    threshold = 1.25
+    elarge=[(u,v) for (u,v,d) in G.edges(data=True) if d['weight'] > threshold]
+    esmall=[(u,v) for (u,v,d) in G.edges(data=True) if d['weight'] <= threshold]
+
+    node_colors = [get_node_color(i, ldamodel, processed_lyrics) for (i, _) in enumerate(processed_lyrics)]
+    nx.draw_networkx_nodes(G, pos, node_size=1, node_color=node_colors)
+    nx.draw_networkx_edges(G,pos,edgelist=elarge, width=0)
+    nx.draw_networkx_edges(G,pos,edgelist=esmall, width=0, alpha=0.2, edge_color='b', style='dashed')
+    nx.draw_networkx_labels(G, pos, font_size=0, font_family='sans-serif')
+
+    nx.draw(G)
+    plt.show()"""
+
+
+def get_most_likely_topic(doc, model):
+    bow = model.id2word.doc2bow(doc)
+    topics, probabilities = zip(*model.get_document_topics(bow))
+    max_p = max(probabilities)
+    topic = topics[probabilities.index(max_p)]
+    return topic
+
+def get_node_color(i, model, texts):
+    return 'skyblue' if get_most_likely_topic(texts[i], model) == 0 else 'pink'
 
 
 def LDA_to_vecs(ldamodel: gensim.models.LdaModel, corpus, texts: pd.DataFrame) -> pd.DataFrame:
@@ -162,7 +203,7 @@ def plotPCA(df: pd.DataFrame, title: str = "PCA Visualization"):
     # utilize the sort order to sort eigenvalues and eigenvectors
     sorted_eigenvalues = eigenvalues[order_of_importance]
     sorted_eigenvectors = eigenvectors[:,order_of_importance] # sort the columns
-    plotEigenvalues(sorted_eigenvalues)
+    #plotEigenvalues(sorted_eigenvalues)
 
     k = 2 # select the number of principal components
     reduced_data = np.matmul(standardizedData, sorted_eigenvectors[:,:k]) # transform the original data
