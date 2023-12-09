@@ -21,7 +21,7 @@ PROCESSEDCSVFILEPATH: str = "RelativeFrequencies.csv"
 LDAFILEPATH: str = "LDA.csv"
 LYRICS: str = "Lyrics"
 SONGMETADATA: list = ["Artist", "Title", LYRICS]
-NUMTOPICS = 2
+NUMTOPICS = 40
 NUMLDAPASSES = 200
 
 def main():
@@ -30,7 +30,7 @@ def main():
     # get a pandas dataframe
     SongsCSVDF: pd.DataFrame = getDataFrameSongsCSV()
     
-    #useBagOfWordsPCA(SongsCSVDF)
+    useBagOfWordsPCA(SongsCSVDF)
 
     useLDA(SongsCSVDF)
 
@@ -84,6 +84,14 @@ def useLDA(SongsCSVDF: pd.DataFrame):
     # my work
     df_with_LDA_vecs = LDA_to_vecs(ldamodel, corpus, SongsCSVDF)
     df_with_LDA_vecs.columns = SONGMETADATA + ["LDA Vector"]
+    # change the dataframe so that plotPCA can process it
+    arr: np.ndarray = df_with_LDA_vecs.drop(columns=SONGMETADATA).to_numpy()
+    newarr = np.zeros([arr.shape[0], NUMTOPICS])
+    for idx, elt in enumerate(arr):
+        newarr[idx] = elt[0]
+    df_with_LDA_vecs = pd.concat([SongsCSVDF, pd.DataFrame(newarr)], ignore_index=True, axis=1)
+    df_with_LDA_vecs.columns = SONGMETADATA + list(range(NUMTOPICS))
+    
     plotPCA(df_with_LDA_vecs, f"PCA on LDA vectors with {NUMTOPICS} topics and {NUMLDAPASSES} passes")
 
 
@@ -116,7 +124,7 @@ def useLDA(SongsCSVDF: pd.DataFrame):
     nx.draw(G)
     plt.show()"""
 
-
+# for the spring graph
 def get_most_likely_topic(doc, model):
     bow = model.id2word.doc2bow(doc)
     topics, probabilities = zip(*model.get_document_topics(bow))
@@ -124,6 +132,7 @@ def get_most_likely_topic(doc, model):
     topic = topics[probabilities.index(max_p)]
     return topic
 
+# for the spring graph
 def get_node_color(i, model, texts):
     return 'skyblue' if get_most_likely_topic(texts[i], model) == 0 else 'pink'
 
@@ -189,11 +198,7 @@ def removeStopsAndStem(tokens: list) -> list:
 
 def plotPCA(df: pd.DataFrame, title: str = "PCA Visualization"):
     arr: np.ndarray = df.drop(columns=SONGMETADATA).to_numpy()
-    if type(arr[0]) is np.ndarray: # if sent from LDA, need this to clean it up
-        newarr = np.zeros([arr.shape[0], NUMTOPICS])
-        for idx, elt in enumerate(arr):
-            newarr[idx] = elt[0]
-        arr = newarr
+    
     # normalize and standardize the vectors
     standardizedData = (arr - arr.mean(axis=0)) / arr.std(axis=0)
     covarianceMatrix = np.cov(standardizedData, rowvar=False)
@@ -203,7 +208,7 @@ def plotPCA(df: pd.DataFrame, title: str = "PCA Visualization"):
     # utilize the sort order to sort eigenvalues and eigenvectors
     sorted_eigenvalues = eigenvalues[order_of_importance]
     sorted_eigenvectors = eigenvectors[:,order_of_importance] # sort the columns
-    #plotEigenvalues(sorted_eigenvalues)
+    plotEigenvalues(sorted_eigenvalues)
 
     k = 2 # select the number of principal components
     reduced_data = np.matmul(standardizedData, sorted_eigenvectors[:,:k]) # transform the original data
