@@ -8,6 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import nltk
 import gensim
+import itertools
+import networkx as nx
 #from sklearn.decomposition import KernelPCA
 
 from collections import Counter
@@ -19,8 +21,8 @@ PROCESSEDCSVFILEPATH: str = "RelativeFrequencies.csv"
 LDAFILEPATH: str = "LDA.csv"
 LYRICS: str = "Lyrics"
 SONGMETADATA: list = ["Artist", "Title", LYRICS]
-NUMTOPICS = 50
-NUMLDAPASSES = 80
+NUMTOPICS = 40
+NUMLDAPASSES = 100
 
 def main():
     """ Main entry point of the app """
@@ -79,6 +81,7 @@ def useLDA(SongsCSVDF: pd.DataFrame):
     print(df_dominant_topic)
     df_dominant_topic.to_csv(LDAFILEPATH, index=False, encoding="utf-8")"""
 
+    # my work
     df_with_LDA_vecs = LDA_to_vecs(ldamodel, corpus, SongsCSVDF)
     df_with_LDA_vecs.columns = SONGMETADATA + ["LDA Vector"]
     plotPCA(df_with_LDA_vecs, f"PCA on LDA vectors with {NUMTOPICS} topics and {NUMLDAPASSES} passes")
@@ -159,11 +162,11 @@ def plotPCA(df: pd.DataFrame, title: str = "PCA Visualization"):
     # utilize the sort order to sort eigenvalues and eigenvectors
     sorted_eigenvalues = eigenvalues[order_of_importance]
     sorted_eigenvectors = eigenvectors[:,order_of_importance] # sort the columns
-    # plotEigenvalues(sorted_eigenvalues)
+    plotEigenvalues(sorted_eigenvalues)
 
     k = 2 # select the number of principal components
     reduced_data = np.matmul(standardizedData, sorted_eigenvectors[:,:k]) # transform the original data
-    plt.figure(figsize=[10, 10])
+    plt.figure()
     plt.ylim(top=5, bottom=-5)
     for index in range(len(reduced_data)):
         x, y = reduced_data[index]
@@ -177,6 +180,7 @@ def plotPCA(df: pd.DataFrame, title: str = "PCA Visualization"):
         else:
             plt.plot(x, y, "c-o")
 
+    plt.title(title)
     plt.show()
     
 
