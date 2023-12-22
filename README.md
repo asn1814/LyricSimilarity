@@ -1,5 +1,5 @@
 # LyricSimilarity
-Various visualization of song lyric data, mostly PCA and LDA. 
+Various visualizations of song lyric data, mostly PCA and LDA. 
 
 Read my full process and analysis here: https://docs.google.com/document/d/e/2PACX-1vS_TdZS1EC4r1J6VunEHdu2yZbTUmLgAfpIchFljUkDAu4npJrkgVfe2vblsEKA6mp4KOXgjSOi-Wih/pub
 
